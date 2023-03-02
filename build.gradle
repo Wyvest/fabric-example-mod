@@ -1,6 +1,6 @@
 plugins {
-	id 'fabric-loom' version "1.1-SNAPSHOT"
-	id 'legacy-looming' version "1.1-SNAPSHOT" // Version must be the same as fabric-loom's
+	id 'java'
+	id 'xyz.wagyourtail.unimined' version "0.4.1-SNAPSHOT"
 	id 'maven-publish'
 }
 
@@ -12,87 +12,63 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
-	// Fixed LWJGL on Linux
+	// Forge maven for mcp mappings
 	maven {
-		name = 'Babric'
-		url = 'https://maven.glass-launcher.net/babric'
+		url "https://maven.minecraftforge.net/"
+		metadataSources {
+			artifact()
+		}
+	}
+	// Legacy Fabric maven
+	maven {
+		name = "legacy-fabric"
+		url = "https://repo.legacyfabric.net/repository/legacyfabric/"
 	}
 }
 
-loom {
-	setIntermediaryUrl('https://repo.legacyfabric.net/repository/legacyfabric/net/legacyfabric/intermediary/%1$s/intermediary-%1$s-v2.jar');
-	
-	// Only needed for versions not available from vanilla launcher by default.
-	// customMinecraftManifest.set("https://meta.legacyfabric.net/v2/manifest/${minecraft_version}")
-
-	// Required by 1.7.x
-	// runs {
-	// 	client {
-	// 		programArgs "--userProperties", "{}"
-	// 	}
-	// }
+unimined {
+	useGlobalCache = false
 }
 
-def lwjgl2 = !project.minecraft_version.startsWith("1.13")
-def currentOs = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+minecraft {
+	fabric()
+
+	mcRemapper.tinyRemapperConf = {
+		if (!project.use_yarn) {
+			// most mcp mappings (except older format) dont include field desc
+			ignoreFieldDesc(true)
+		}
+		// this also fixes some issues with them, as it tells tiny remapper to try harder to resolve conflicts
+		ignoreConflicts(true)
+	}
+}
 
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.legacyfabric:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	minecraft "net.minecraft:minecraft:${project.minecraft_version}"
 
-	// Fabric API provides hooks for events, item registration, and more. As most mods will need this, it's included by default. 
+	if (!project.use_yarn) {
+		if (!project.use_mcp_from_forge) {
+			mappings "de.oceanlabs.mcp:mcp:${project.minecraft_version}:srg@zip"
+			mappings "de.oceanlabs.mcp:mcp_${project.mcp_channel}:${project.mcp_version}-${project.minecraft_version}@zip"
+		} else {
+			mappings "net.minecraftforge:forge:${project.mc_version}-${project.forge_version}:src@zip"
+		}
+	}
+
+	mappings "net.fabricmc:intermediary:${project.minecraft_version}:v2"
+	if (project.use_yarn) mappings "net.legacyfabric:yarn:${project.yarn_mappings}:v2"
+
+	fabric "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// version of guava required by old mc versions to avoid crashing.
+	implementation "com.google.guava:guava:17.0"
+
+	// Fabric API provides hooks for events, item registration, and more. As most mods will need this, it's included by default.
 	// If you know for a fact you don't, it's not required and can be safely removed.
-	modImplementation ("net.legacyfabric.legacy-fabric-api:legacy-fabric-api:${project.fabric_version}") {
- 		exclude module: "legacy-fabric-entity-events-v1"
- 	}
+	modImplementation ("net.legacyfabric.legacy-fabric-api:legacy-fabric-api:${project.fabric_version}")
 
 	// You can retrieve a specific api module using this notation.
 	//	modImplementation(legacyFabricApi.module("legacy-fabric-item-groups-v1", project.fabric_version))
-
-	if (lwjgl2) {
-		if (currentOs.contains("mac")) {
-			implementation 'org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209'
-			implementation 'org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209'
-			implementation 'org.lwjgl.lwjgl:lwjgl-platform:2.9.4-nightly-20150209'
-		} else if (currentOs.contains("linux")) {
-			implementation 'org.lwjgl.lwjgl:lwjgl_util:2.9.4-babric.1'
-			implementation 'org.lwjgl.lwjgl:lwjgl:2.9.4-babric.1'
-			implementation 'org.lwjgl.lwjgl:lwjgl-platform:2.9.4-babric.1'
-		}
-	}
-}
-
-if (lwjgl2) {
-	if (currentOs.contains("mac")) {
-		configurations.all {
-			resolutionStrategy {
-				dependencySubstitution {
-					substitute module('org.lwjgl.lwjgl:lwjgl_util:2.9.2-nightly-201408222') with module('org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209')
-					substitute module('org.lwjgl.lwjgl:lwjgl:2.9.2-nightly-201408222') with module('org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209')
-				}
-				force 'org.lwjgl.lwjgl:lwjgl-platform:2.9.4-nightly-20150209'
-			}
-		}
-	} else if (currentOs.contains("linux")) {
-		configurations.all {
-			resolutionStrategy {
-				dependencySubstitution {
-					substitute(module('org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209')) using module('org.lwjgl.lwjgl:lwjgl_util:2.9.4-babric.1')
-					substitute module('org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209') using module('org.lwjgl.lwjgl:lwjgl:2.9.4-babric.1')
-				}
-				force 'org.lwjgl.lwjgl:lwjgl-platform:2.9.4-babric.1'
-			}
-		}
-	}
-}
-
-processResources {
-	inputs.property "version", project.version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": project.version
-	}
 }
 
 // ensure that the encoding is set to UTF-8, no matter what the system default is
