@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'xyz.wagyourtail.unimined' version "0.4.1-SNAPSHOT"
+	id 'xyz.wagyourtail.unimined' version "0.4.2-SNAPSHOT"
 	id 'maven-publish'
 }
 
@@ -12,17 +12,16 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
-	// Forge maven for mcp mappings
-	maven {
-		url "https://maven.minecraftforge.net/"
-		metadataSources {
-			artifact()
+	mavenCentral()
+
+	if (!project.use_yarn) {
+		// Forge maven for mcp mappings
+		maven {
+			url "https://maven.minecraftforge.net/"
+			metadataSources {
+				artifact()
+			}
 		}
-	}
-	// Legacy Fabric maven
-	maven {
-		name = "legacy-fabric"
-		url = "https://repo.legacyfabric.net/repository/legacyfabric/"
 	}
 }
 
@@ -31,7 +30,7 @@ unimined {
 }
 
 minecraft {
-	fabric()
+	legacyFabric()
 
 	mcRemapper.tinyRemapperConf = {
 		if (!project.use_yarn) {
@@ -51,24 +50,32 @@ dependencies {
 			mappings "de.oceanlabs.mcp:mcp:${project.minecraft_version}:srg@zip"
 			mappings "de.oceanlabs.mcp:mcp_${project.mcp_channel}:${project.mcp_version}-${project.minecraft_version}@zip"
 		} else {
-			mappings "net.minecraftforge:forge:${project.mc_version}-${project.forge_version}:src@zip"
+			mappings "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}:src@zip"
 		}
 	}
 
-	mappings "net.fabricmc:intermediary:${project.minecraft_version}:v2"
+	mappings "net.legacyfabric:intermediary:${project.minecraft_version}:v2"
 	if (project.use_yarn) mappings "net.legacyfabric:yarn:${project.yarn_mappings}:v2"
 
-	fabric "net.fabricmc:fabric-loader:${project.loader_version}"
+	legacyFabric "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	// version of guava required by old mc versions to avoid crashing.
-	implementation "com.google.guava:guava:17.0"
+	// Enable if game is crashing because of a missing method.
+//	implementation "com.google.guava:guava:17.0"
 
 	// Fabric API provides hooks for events, item registration, and more. As most mods will need this, it's included by default.
 	// If you know for a fact you don't, it's not required and can be safely removed.
 	modImplementation ("net.legacyfabric.legacy-fabric-api:legacy-fabric-api:${project.fabric_version}")
 
 	// You can retrieve a specific api module using this notation.
-	//	modImplementation(legacyFabricApi.module("legacy-fabric-item-groups-v1", project.fabric_version))
+//	modImplementation(legacyFabricApi.module("legacy-fabric-item-groups-v1", project.fabric_version))
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
 }
 
 // ensure that the encoding is set to UTF-8, no matter what the system default is
