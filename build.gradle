@@ -59,9 +59,6 @@ dependencies {
 
 	legacyFabric "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	// Enable if game is crashing because of a missing method.
-//	implementation "com.google.guava:guava:17.0"
-
 	// Fabric API provides hooks for events, item registration, and more. As most mods will need this, it's included by default.
 	// If you know for a fact you don't, it's not required and can be safely removed.
 	modImplementation ("net.legacyfabric.legacy-fabric-api:legacy-fabric-api:${project.fabric_version}")
