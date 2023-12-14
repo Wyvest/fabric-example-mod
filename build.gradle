@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'xyz.wagyourtail.unimined' version '1.1.1-SNAPSHOT'
+    id "maven-publish"
 }
 
 group project.maven_group
@@ -72,6 +73,14 @@ dependencies {
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
+
+    withSourcesJar()
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${base.archivesName.get()}" }
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -82,5 +91,20 @@ tasks.withType(JavaCompile).configureEach {
 
     if (JavaVersion.current().isJava9Compatible()) {
         it.options.release = 8
+    }
+}
+
+// Configure the maven publication
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+
+    // Select the repositories you want to publish to
+    repositories {
+        // Uncomment to publish to the local maven
+        // mavenLocal()
     }
 }
