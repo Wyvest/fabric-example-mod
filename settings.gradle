@@ -9,5 +9,6 @@ pluginManagement {
 			url = "https://repo.legacyfabric.net/repository/legacyfabric/"
 		}
 		gradlePluginPortal()
+		mavenLocal()
 	}
 }
